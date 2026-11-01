@@ -22,6 +22,8 @@ STATIC = config.ROOT / "advisor" / "static"
 PROFILES = {p["id"]: p for p in json.loads((config.ROOT / "eval" / "profiles.json").read_text(encoding="utf-8"))}
 ACCESS_PASSWORD = os.getenv("ADVISOR_ACCESS_PASSWORD", "")
 MAX_AUDIO_BYTES = 25 * 1024 * 1024  # Azure OpenAI transcription limit
+if os.getenv("VERCEL"):
+    MAX_AUDIO_BYTES = 4 * 1024 * 1024  # Leave room for multipart overhead under Vercel's request limit.
 SUPPORTED_BATCHES = {2022, 2023, 2024, 2025, 2026}
 PENDING_BATCH_QUESTIONS = {}
 SEMESTER_ONE_RE = re.compile(r"\b(?:semester|semster|sem)\s*(?:1|one|first)(?:st)?\b|\b(?:first|1st)\s+semester\b", re.I)
@@ -350,7 +352,8 @@ async def transcribe(audio: UploadFile = File(...)):
         raise HTTPException(503, "Voice input needs an Azure transcription deployment or OPENAI_API_KEY in .env")
     data = await audio.read()
     if not data or len(data) > MAX_AUDIO_BYTES:
-        raise HTTPException(400, "Audio must be between 1 byte and 25 MB")
+        max_audio_mb = MAX_AUDIO_BYTES // (1024 * 1024)
+        raise HTTPException(400, f"Audio must be between 1 byte and {max_audio_mb} MB")
     if provider == "azure":
         from openai import AzureOpenAI
         client = AzureOpenAI(azure_endpoint=config.AZURE_ENDPOINT, api_key=config.AZURE_API_KEY, api_version=config.TRANSCRIBE_API_VERSION)

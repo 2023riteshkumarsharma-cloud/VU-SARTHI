@@ -36,6 +36,20 @@ After the first deployment, Render shows the public URL on the service page. Sub
 automatically. If chat or transcription is unavailable, check the service's Environment and Logs pages without
 adding credentials to the repository.
 
+## Deploy the dashboard on Vercel
+
+The root `index.py` exposes the FastAPI app, and `.python-version` selects Python 3.12. To deploy, import
+`gsv3245-cpu/Advisor_2` in Vercel, keep the project root at the repository root, and deploy the `main` branch.
+Vercel detects FastAPI and installs `requirements.txt`; no separate frontend build command is needed. The
+`.vercelignore` rules keep local work files out while retaining the source PDFs and workbooks used by the app.
+
+For chat, add the provider's credentials under **Project Settings → Environment Variables** (for example,
+`LLM_PROVIDER=azure`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and
+`AZURE_OPENAI_CHAT_DEPLOYMENT`). Add `OPENAI_API_KEY` or Azure transcription settings to enable server-side voice
+transcription. `ADVISOR_ACCESS_PASSWORD` is optional; when set, use username `advisor` and that password. Never
+commit `.env` or paste secret values into deployment configuration. Without chat credentials, the dashboard runs in
+preview mode. Vercel deployments limit audio uploads to 4 MB; browser speech recognition may still be available.
+
 Chat supports Azure OpenAI, OpenAI, Groq, and Gemini through the credentials in `.env`; `LLM_PROVIDER=auto` chooses a configured provider (Azure first). AWS Bedrock is optional for embeddings. Without chat credentials the web app runs in **preview mode**: it shows the passages retrieval would ground an answer in.
 
 ## Data: what is converted into what

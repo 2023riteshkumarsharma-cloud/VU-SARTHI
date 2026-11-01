@@ -2,11 +2,15 @@
 .kilo/
 .pytest_cache/
 __pycache__/
+.venv/
+venv/
+work/
+node_modules/
 tests/
 eval/results/
 Knowledge_package/
 knowledge_base/embedding_cache.json
 knowledge_base/exports/
-*.pdf
-*.xlsx
+knowledge_base/**/*.xlsx
+GenAI_Assignment.pdf
 *.md
