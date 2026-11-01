@@ -1,4 +1,4 @@
-.env
+.env*
 .kilo/
 .pytest_cache/
 __pycache__/
