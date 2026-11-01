@@ -5,6 +5,8 @@ curriculum questions (by batch, semester, month, credits, L-T-P, prerequisites, 
 (Student Handbook, SOP). Every answer cites the exact sheet cell or handbook page. It asks follow-up questions when
 information is missing and flags conflicting sources. You can type or speak.
 
+**Live demo:** [advisor-2.vercel.app](https://advisor-2.vercel.app/)
+
 ## Quick start
 
 ```bash
