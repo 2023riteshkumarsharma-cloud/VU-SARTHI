@@ -4,7 +4,6 @@
 """
 import base64
 import json
-import mimetypes
 import os
 import re
 import secrets
@@ -148,9 +147,13 @@ def open_source(source_key: str):
     path = config.SOURCES.get(source_key)
     if path is None or not path.is_file():
         raise HTTPException(404, "Source document not found")
+    media_type = {
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".pdf": "application/pdf",
+    }.get(path.suffix.lower(), "application/octet-stream")
     return Response(
         content=path.read_bytes(),
-        media_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+        media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
     )
 
