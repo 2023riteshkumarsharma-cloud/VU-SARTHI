@@ -3,14 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vidyashilp University Academic Advisor</title>
-<meta name="description" content="Academic advisor for Vidyashilp University B.Tech (DS), grounded in the Handbook, SOP and curriculum workbooks.">
+<title>VU SARTHI</title>
+<meta name="description" content="VU SARTHI: academic advising for Vidyashilp University B.Tech (DS), grounded in the Handbook, SOP and curriculum workbooks.">
 <meta name="color-scheme" content="light">
 <link rel="icon" href="/assets/Logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Mona+Sans:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="/assets/vidyashilp.jpg">
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <style>
@@ -32,8 +31,7 @@
   body {
     margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
     font: 400 16px/1.65 "Mona Sans", system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink);
-    /* The campus photograph is the stage for the whole app; a light wash calms it without hiding it. */
-    background: linear-gradient(rgba(246, 247, 250, .16), rgba(246, 247, 250, .16)), url(/assets/vidyashilp.jpg) 50% 62% / cover no-repeat, var(--paper);
+    background: #fff;
     -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   }
   button, textarea, select { font: inherit; color: inherit; }
@@ -51,9 +49,11 @@
   }
   header .logo { height: 40px; width: auto; display: block; }
   header .title { padding-left: 16px; border-left: 1px solid var(--line); min-width: 0; }
-  header h1 { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 650; color: var(--navy-deep); letter-spacing: -.01em; }
+  header h1 { margin: 0; font-size: 19px; line-height: 1.25; font-weight: 700; color: var(--navy-deep); letter-spacing: -.02em; }
   header .sub { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header .spacer { flex: 1; }
+  #ptoggle { width: 48px; height: 48px; padding: 0; justify-content: center; border-radius: 50%; }
+  #ptoggle .lbl { display: none; }
   .btn {
     height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--navy);
     display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
@@ -76,21 +76,36 @@
   body[data-profile="closed"] aside { display: none; }
   main {
     display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0;
-    /* A feathered light band sits behind the reading column only: photo stays vivid at the edges, text stays AAA. */
-    background: linear-gradient(90deg,
-      rgba(248, 249, 252, .10) 0, rgba(248, 249, 252, .10) calc(50% - var(--read) / 2 - 150px),
-      rgba(248, 249, 252, .78) calc(50% - var(--read) / 2 - 24px), rgba(248, 249, 252, .78) calc(50% + var(--read) / 2 + 24px),
-      rgba(248, 249, 252, .10) calc(50% + var(--read) / 2 + 150px), rgba(248, 249, 252, .10) 100%);
+    position: relative; isolation: isolate; overflow: hidden; background: #fff;
   }
+  main::before {
+    content: ""; position: absolute; z-index: 0; inset: auto 0 0; height: 24%; pointer-events: none;
+    background: linear-gradient(171deg, transparent 0 45%, rgba(172, 22, 44, .035) 45.3% 70%, transparent 70.3%),
+      linear-gradient(8deg, transparent 0 32%, rgba(0, 47, 135, .045) 32.3% 66%, transparent 66.3%);
+  }
+  #log, .dock { position: relative; z-index: 1; }
   #log { overflow-y: auto; padding: 40px clamp(16px, 4vw, 40px) 24px; scroll-behavior: smooth; overscroll-behavior: contain; }
   .col { max-width: var(--read); margin: 0 auto; }
 
   /* ---------- empty state ---------- */
-  .empty { padding-top: 6vh; }
-  .empty .kicker { font-size: 13px; font-weight: 600; color: var(--crimson); letter-spacing: .02em; }
-  .empty h2 { margin: 6px 0 10px; font-size: clamp(28px, 4.2vw, 42px); line-height: 1.12; font-weight: 700; letter-spacing: -.025em; color: var(--navy-deep); text-wrap: balance; }
-  .empty p { margin: 0; max-width: 58ch; color: var(--muted); font-size: 16.5px; text-wrap: pretty; }
-  .suggest { list-style: none; margin: 32px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; border-top: 1px solid var(--line); }
+  main:has(.empty) #log { display: flex; align-items: center; padding-bottom: 150px; }
+  main:has(.empty) .col { width: min(100%, 900px); max-width: 900px; }
+  main:has(.empty) .dock { position: absolute; top: 56%; left: 0; right: 0; }
+  main:has(.empty) .examples { position: absolute; z-index: 2; top: calc(56% + 150px); left: 0; right: 0; }
+  .campus-art {
+    position: absolute; z-index: 0; right: 3%; bottom: -3px; width: min(48vw, 580px); height: auto;
+    color: rgba(0, 47, 135, .23); pointer-events: none;
+  }
+  .empty { padding: 24px 0 0; text-align: center; }
+  .empty .kicker { display: none; }
+  .bot-mark { width: 112px; height: 112px; margin: 0 auto 10px; }
+  .bot-mark svg { width: 100%; height: 100%; }
+  .empty h2 { margin: 4px 0 12px; font-size: clamp(38px, 5vw, 56px); line-height: 1.08; font-weight: 750; letter-spacing: -.04em; color: var(--navy-deep); text-wrap: balance; }
+  .empty p { margin: 0 auto; max-width: 58ch; color: var(--muted); font-size: clamp(17px, 2vw, 22px); text-wrap: pretty; }
+  .hero-accent { display: block; width: 132px; height: 5px; margin: 18px auto 0; border-radius: 50%; background: var(--crimson); transform: rotate(-3deg); }
+  .examples { margin: 18px auto 0; color: var(--muted); font-size: 13px; }
+  .examples summary { width: fit-content; margin: 0 auto; color: var(--navy); cursor: pointer; }
+  .suggest { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; border-top: 1px solid var(--line); text-align: left; }
   .suggest button {
     width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 14px 28px 14px 0;
     font-size: 15px; line-height: 1.45; color: var(--navy-deep); cursor: pointer; position: relative; transition: color .2s var(--ease);
@@ -137,6 +152,14 @@
   .meta span::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: rgba(0, 47, 135, .35); }
   .meta .warn { color: var(--warn); font-weight: 600; } .meta .warn::before { background: var(--warn); }
   .meta .ok { color: var(--ok); font-weight: 600; } .meta .ok::before { background: var(--ok); }
+  .listen {
+    display: inline-grid; place-items: center; width: 38px; height: 38px; padding: 5px;
+    color: var(--navy); background: #fff; border: 1px solid var(--line); border-radius: 50%;
+    cursor: pointer; transition: background .2s var(--ease), color .2s var(--ease), transform .2s var(--ease);
+  }
+  .listen:hover, .listen[aria-pressed="true"] { color: var(--crimson); background: var(--crimson-soft); }
+  .listen:active { transform: scale(.96); }
+  .listen svg { width: 26px; height: 26px; }
 
   details.sources { margin-top: 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, .7); }
   details.sources summary {
@@ -166,9 +189,9 @@
   /* ---------- composer ---------- */
   .dock { padding: 10px clamp(12px, 4vw, 40px) max(14px, env(safe-area-inset-bottom)); }
   form {
-    max-width: calc(var(--read) + 32px); margin: 0 auto; display: flex; align-items: flex-end; gap: 6px; padding: 6px;
+    max-width: min(100%, 920px); margin: 0 auto; display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 28px;
     background: var(--glass-strong); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); transition: border-color .2s, box-shadow .2s;
+    border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow); transition: border-color .2s, box-shadow .2s;
   }
   form:focus-within { border-color: rgba(0, 47, 135, .4); box-shadow: var(--shadow), 0 0 0 3px rgba(0, 47, 135, .1); }
   textarea { flex: 1; min-width: 0; resize: none; border: 0; background: transparent; padding: 10px 8px 10px 10px; min-height: 44px; max-height: 180px; font-size: 16px; line-height: 1.5; color: var(--ink); }
@@ -177,9 +200,12 @@
   .icon { width: 44px; height: 44px; flex: none; border-radius: 10px; border: 0; background: transparent; color: var(--navy); display: grid; place-items: center; cursor: pointer; transition: background .2s var(--ease), color .2s; }
   .icon:hover { background: var(--navy-soft); }
   .icon:disabled { opacity: .4; cursor: not-allowed; background: transparent; }
+  #mic { border-left: 1px solid var(--line); border-radius: 0; }
   #mic.rec { background: var(--crimson); color: #fff; animation: ring 1.4s var(--ease) infinite; }
   #mic.busy svg { animation: spin 1s linear infinite; }
-  #send { height: 44px; border-radius: 10px; padding: 0 16px; }
+  #send { height: 66px; width: 72px; border-radius: 22px; padding: 0; justify-content: center; }
+  #send .lbl { display: none; }
+  #send svg { width: 24px; height: 24px; }
   .hint { max-width: calc(var(--read) + 32px); margin: 8px auto 0; display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
   .hint #vstatus { color: var(--crimson); font-weight: 600; }
 
@@ -238,15 +264,24 @@
   }
   @media (min-width: 1180px) { #pclose { display: none; } }
   @media (max-width: 760px) {
-    body { font-size: 15.5px; background-position: 50% 62%, 30% 60%; }
-    main { background: linear-gradient(rgba(248, 249, 252, .72), rgba(248, 249, 252, .8) 55%, rgba(248, 249, 252, .84)); }
+    body { font-size: 15.5px; }
     header { gap: 10px; padding: 8px 12px; }
     header .logo { height: 32px; }
     header .title { padding-left: 10px; }
     header h1 { font-size: 14px; } header .sub { display: none; }
+    #ptoggle { width: 42px; height: 42px; }
     .btn .lbl { display: none; } .btn { padding: 0 11px; height: 42px; }
     #log { padding: 24px 16px 16px; }
+    main:has(.empty) #log { padding-bottom: 110px; }
+    main:has(.empty) .dock { top: 61%; }
+    main:has(.empty) .examples { top: calc(61% + 120px); }
+    .bot-mark { width: 88px; height: 88px; }
+    .empty h2 { font-size: clamp(34px, 9vw, 46px); }
+    .empty p { font-size: 17px; }
+    .campus-art { width: min(74vw, 400px); opacity: .16; }
     .suggest { grid-template-columns: 1fr; }
+    form { padding: 6px; }
+    #send { height: 54px; width: 58px; border-radius: 18px; }
     .turn.user .text { max-width: 88%; font-size: 16px; }
     .hint .keys { display: none; }
   }
@@ -256,17 +291,17 @@
   }
 </style>
 </head>
-<body data-profile="open">
+<body data-profile="closed">
 <a class="skip" href="#q">Skip to question box</a>
 <header>
   <img class="logo" src="/assets/Logo.png" alt="Vidyashilp University" width="300" height="109">
   <div class="title">
-    <h1>Academic Advisor</h1>
-    <div class="sub">B.Tech (DS) · batches 2022–2026 · grounded in the Handbook, SOP and curriculum workbooks</div>
+    <h1>VU SARTHI</h1>
+    <div class="sub">Your guide to courses, credits and academic rules</div>
   </div>
   <div class="spacer"></div>
   <button class="btn" id="ptoggle" type="button" aria-controls="panel" aria-expanded="true" aria-label="Student profile: none">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 9.5 12 5l9 4.5-9 4.5-9-4.5Z"/><path d="M7 11.6V16c0 1.1 2.2 2.5 5 2.5s5-1.4 5-2.5v-4.4"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>
     <span class="who lbl">No profile</span>
   </button>
   <button class="btn primary" id="new" type="button" title="Start a new conversation" aria-label="New chat">
@@ -281,23 +316,47 @@
       <div class="col">
         <section class="empty" id="empty" aria-labelledby="etitle">
           <div class="kicker">Vidyashilp University · B.Tech (Data Science)</div>
-          <h2 id="etitle">Ask about courses, credits, rules or your eligibility</h2>
-          <p>Type or use the microphone. Every answer cites the exact workbook cell or handbook page it relies on.</p>
-          <ul class="suggest">
-            <li><button type="button" class="chip">What are the L-T-P and credits of Machine Learning for the 2025 batch?</button></li>
-            <li><button type="button" class="chip">Which courses does the 2024 batch take in January 2027?</button></li>
-            <li><button type="button" class="chip">What is the minimum attendance required to write end-semester exams?</button></li>
-            <li><button type="button" class="chip">Can I take Deep Learning next semester?</button></li>
-            <li><button type="button" class="chip">How many credits of the Law minor are still TBA for the 2025 batch?</button></li>
-            <li><button type="button" class="chip">What CGPA do I need to progress to the third year?</button></li>
-          </ul>
+          <div class="bot-mark" aria-hidden="true">
+            <svg viewBox="0 0 120 120" fill="none">
+              <path d="M60 9v12" stroke="#092F87" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="60" cy="8" r="6" fill="#092F87"/>
+              <rect x="17" y="27" width="86" height="66" rx="29" fill="#fff" stroke="#092F87" stroke-width="6"/>
+              <rect x="29" y="42" width="62" height="37" rx="18.5" fill="#092F87"/>
+              <path d="M43 58c0-4 3-7 7-7s7 3 7 7m13 0c0-4 3-7 7-7s7 3 7 7" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+              <path d="M51 67c5 6 13 6 18 0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+              <path d="M13 49h4m86 0h4" stroke="#092F87" stroke-width="7" stroke-linecap="round"/>
+              <path d="m99 21 5-8m3 17 9-4m-7 13 9 1" stroke="#AC162C" stroke-width="5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2 id="etitle">VU SARTHI</h2>
+          <p>Your quick guide to courses, credits and academic rules.</p>
+          <span class="hero-accent" aria-hidden="true"></span>
+          <details class="examples">
+            <summary>Try a sample question</summary>
+            <ul class="suggest">
+            <li><button type="button" class="chip">Which courses are offered in semester 5 for the 2024 batch?</button></li>
+            <li><button type="button" class="chip">What are the credits and L-T-P for Machine Learning in the 2025 batch?</button></li>
+            <li><button type="button" class="chip">What attendance is required to sit end-semester exams?</button></li>
+            <li><button type="button" class="chip">What CGPA is required to progress to the next semester?</button></li>
+            <li><button type="button" class="chip">Which minors are available, and how many credits are required?</button></li>
+            <li><button type="button" class="chip">Which courses does the 2023 batch take in January 2027?</button></li>
+            </ul>
+          </details>
         </section>
       </div>
     </div>
+    <svg class="campus-art" viewBox="0 0 560 230" fill="none" aria-hidden="true" focusable="false">
+      <g stroke="currentColor" stroke-width="2">
+        <path d="M37 204h492M80 204V94l126-53 126 53v110M206 204V94M80 94h252M101 107h27v29h-27zm48 0h27v29h-27zm-48 45h27v29h-27zm48 0h27v29h-27zm78-45h27v29h-27zm48 0h27v29h-27zm-48 45h27v29h-27zm48 0h27v29h-27z"/>
+        <path d="M363 204V132l70-31 70 31v72M381 143h22v22h-22zm39 0h22v22h-22zm39 0h22v22h-22zm-78 39h22v22h-22zm39 0h22v22h-22zm39 0h22v22h-22z"/>
+        <path d="M487 117c0-31 10-53 27-66m-27 66c-5-26-17-40-35-45m35 45c11-26 27-38 48-40m-48 40V48m-27 3 12 16m24-22 8 19m18-15-12 16"/>
+        <path d="M30 204h520M52 214h470"/>
+      </g>
+    </svg>
     <div class="dock">
       <form id="f">
         <label class="sr" for="q">Your question</label>
-        <textarea id="q" rows="1" placeholder="Ask about prerequisites, credits, attendance, CGPA…" title="Enter to send, Shift+Enter for a new line"></textarea>
+        <textarea id="q" rows="1" placeholder="Ask your academic question…" title="Enter to send, Shift+Enter for a new line"></textarea>
         <button class="icon" id="mic" type="button" aria-label="Speak your question" title="Speak your question"></button>
         <button class="btn primary" id="send" type="submit" aria-label="Send question">
           <span class="lbl">Send</span>
@@ -310,26 +369,25 @@
   <button class="scrim" id="scrim" type="button" tabindex="-1" aria-label="Close student profile"></button>
   <aside id="panel" aria-labelledby="ptitle">
     <div class="phead">
-      <h2 id="ptitle">Student profile</h2>
+      <h2 id="ptitle">Student Profile</h2>
       <button class="icon" id="pclose" type="button" aria-label="Close student profile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </div>
-    <label for="profile">Answer as</label>
-    <select id="profile"><option value="">No profile – ask me</option></select>
+    <label for="profile">Select student</label>
+    <select id="profile"><option value="">Ask without a profile</option></select>
     <div class="pbody" id="pinfo"></div>
-    <div class="pfoot">Profiles are synthetic records for demonstration. Switching profile starts a new conversation.
-      <p><a id="transcriptLink" href="#" target="_blank" rel="noopener" hidden>Open synthetic transcript sample</a></p>
-      <p><a id="registrationLink" href="#" target="_blank" rel="noopener" hidden>Open draft registration record</a></p>
+    <div class="pfoot">
+      <a id="transcriptLink" href="#" target="_blank" rel="noopener" hidden>Open synthetic transcript sample</a>
+      <a id="registrationLink" href="#" target="_blank" rel="noopener" hidden>Open draft registration record</a>
       <button class="btn" id="planButton" type="button" disabled>Build draft course plan</button>
-      <p class="pnotes">The draft uses deterministic curriculum and eligibility checks. Confirm decisions with the university.</p>
     </div>
   </aside>
 </div>
 <script>
 const $ = s => document.querySelector(s);
 const log = $('#log'), col = $('#log .col'), q = $('#q'), send = $('#send'), mic = $('#mic'), vstatus = $('#vstatus');
-let thread = crypto.randomUUID(), profiles = [], busy = false;
+let thread = crypto.randomUUID(), profiles = [], busy = false, activeSpeakButton = null;
 
 const ICON = {
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
@@ -338,6 +396,19 @@ const ICON = {
   chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/></svg>',
 };
+function makeSpeakButton() {
+  const button = document.createElement('button');
+  button.className = 'listen'; button.type = 'button'; button.dataset.speak = 'true';
+  button.setAttribute('aria-label', 'Listen to answer'); button.setAttribute('aria-pressed', 'false');
+  button.title = 'Listen to answer';
+  button.innerHTML = '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 7V3"/><circle cx="24" cy="3" r="2" fill="currentColor"/><rect x="8" y="12" width="32" height="27" rx="12"/><path d="M15 22h18v9H15z" fill="currentColor" stroke="none"/><path d="M18 25h.1m11.8 0h.1" stroke="#fff" stroke-width="3.5"/><path d="M21 29c2 2 4 2 6 0" stroke="#fff" stroke-width="2"/><path d="M42 20q4 5 0 10m3-14q7 9 0 18" stroke="#ac162c"/></svg>';
+  return button;
+}
+function setSpeakButton(button, speaking) {
+  button.setAttribute('aria-pressed', String(speaking));
+  button.setAttribute('aria-label', speaking ? 'Stop reading answer' : 'Listen to answer');
+  button.title = speaking ? 'Stop reading answer' : 'Listen to answer';
+}
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const md = t => (window.marked && window.DOMPurify) ? DOMPurify.sanitize(marked.parse(t)) : esc(t).replace(/\n/g, '<br>');
 const citeify = html => html.replace(/\[(S\d+)\]/g, (_, id) => `<button type="button" class="cite" data-src="${id}" aria-label="Source ${id}">${id}</button>`);
@@ -420,10 +491,7 @@ async function ask(text) {
     out.innerHTML = citeify(md(d.answer));
     out.querySelectorAll('table').forEach(t => { const w = document.createElement('div'); w.className = 'tablewrap'; t.before(w); w.appendChild(t); });
     const m = document.createElement('div'); m.className = 'meta'; m.innerHTML = meta.join(''); turn.appendChild(m);
-    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
-      const speak = document.createElement('button'); speak.className = 'btn'; speak.type = 'button'; speak.dataset.speak = 'true';
-      speak.textContent = 'Read answer aloud'; m.appendChild(speak);
-    }
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) m.appendChild(makeSpeakButton());
     const s = sourcesBlock(sources); if (s) turn.appendChild(s);
   } catch (err) {
     out.innerHTML = `<div class="error" role="alert">The advisor could not answer: ${esc(err.message)}<br><button class="btn" type="button">Try again</button></div>`;
@@ -449,8 +517,8 @@ function setPanel(open) {
   $('#ptoggle').setAttribute('aria-expanded', open);
   if (open && !wide.matches) $('#profile').focus();
 }
-setPanel(wide.matches);
-wide.addEventListener('change', e => setPanel(e.matches));
+setPanel(false);
+wide.addEventListener('change', () => setPanel(false));
 $('#ptoggle').addEventListener('click', () => setPanel(document.body.dataset.profile !== 'open'));
 $('#pclose').addEventListener('click', () => { setPanel(false); $('#ptoggle').focus(); });
 $('#scrim').addEventListener('click', () => setPanel(false));
@@ -461,14 +529,16 @@ function renderProfile(p) {
   $('#ptoggle .who').textContent = p ? p.label.split(' – ')[0] : 'No profile';
   $('#ptoggle').setAttribute('aria-label', 'Student profile: ' + (p ? p.label.split(' – ')[0] : 'none'));
   if (!p) {
-    box.innerHTML = '<p class="intro">Choose a synthetic student to get personalised answers about eligibility and next semester’s courses.</p>';
+    box.innerHTML = '';
     $('#transcriptLink').hidden = true; $('#registrationLink').hidden = true; $('#planButton').disabled = true; return;
   }
   const [name, desc] = p.label.split(' – ');
   const failed = p.failed_courses || [];
+  const minorSummary = p.minor ? `${desc || `${p.batch} batch, semester ${p.current_semester}`} · ${p.minor} minor` :
+    (desc || `${p.batch} batch, semester ${p.current_semester}`);
   box.innerHTML = `
-    <div class="pname"><strong>${esc(name)}</strong><span class="tag">Synthetic</span></div>
-    ${desc ? `<p class="pdesc">${esc(desc)}</p>` : ''}
+    <div class="pname"><strong>${esc(name)}</strong></div>
+    <p class="pdesc">${esc(minorSummary)}</p>
     <dl class="facts">
       <div><dt>Batch</dt><dd>${esc(p.batch)}</dd></div>
       <div><dt>Current semester</dt><dd>${esc(p.current_semester)}</dd></div>
@@ -476,7 +546,7 @@ function renderProfile(p) {
       <div><dt>Credits earned</dt><dd>${p.credits_earned ?? '—'}</dd></div>
     </dl>
     <div class="psec"><h3>Backlogs</h3>${failed.length ? `<div class="codes">${failed.map(c => `<span class="code">${esc(c)}</span>`).join('')}</div>` : '<span class="clear">None on record</span>'}</div>
-    <div class="psec"><h3>Minor</h3><p class="pnotes">${p.minor ? esc(p.minor) : 'None declared'}</p></div>
+    <div class="psec"><h3>Minor taken</h3><p class="pnotes">${p.minor ? esc(p.minor) : 'None declared'}</p></div>
     ${p.notes ? `<div class="psec"><h3>Notes</h3><p class="pnotes">${esc(p.notes)}</p></div>` : ''}`;
   $('#transcriptLink').href = `/api/profiles/${encodeURIComponent(p.id)}/transcript`;
   $('#registrationLink').href = `/api/profiles/${encodeURIComponent(p.id)}/registration`;
@@ -500,10 +570,7 @@ $('#planButton').addEventListener('click', async () => {
     const visual = document.createElement('a'); visual.href = `/api/plan/${encodeURIComponent(id)}/infographic.svg`;
     visual.target = '_blank'; visual.rel = 'noopener'; visual.textContent = 'Open course structure infographic'; m.appendChild(visual);
     turn.appendChild(m);
-    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
-      const speak = document.createElement('button'); speak.className = 'btn'; speak.type = 'button'; speak.dataset.speak = 'true';
-      speak.textContent = 'Read answer aloud'; m.appendChild(speak);
-    }
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) m.appendChild(makeSpeakButton());
     const source = sourcesBlock(data.sources || []); if (source) turn.appendChild(source);
   } catch (error) {
     add('bot', `<div class="error" role="alert">Could not build the draft plan: ${esc(error.message)}</div>`);
@@ -514,13 +581,27 @@ log.addEventListener('click', e => {
   const button = e.target.closest('[data-speak]');
   if (!button) return;
   if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
-  if (button.textContent === 'Stop speaking') { speechSynthesis.cancel(); button.textContent = 'Read answer aloud'; return; }
-  if (speechSynthesis.speaking) speechSynthesis.cancel();
+  if (activeSpeakButton === button && speechSynthesis.speaking) {
+    speechSynthesis.cancel(); setSpeakButton(button, false); activeSpeakButton = null; return;
+  }
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel();
+    if (activeSpeakButton) setSpeakButton(activeSpeakButton, false);
+  }
   const content = button.closest('.turn')?.querySelector('.answer')?.innerText || '';
+  if (!content.trim()) return;
   const utterance = new SpeechSynthesisUtterance(content);
   utterance.lang = 'en-IN';
-  button.textContent = 'Stop speaking';
-  utterance.onend = utterance.onerror = () => { button.textContent = 'Read answer aloud'; };
+  const voices = speechSynthesis.getVoices();
+  const femaleVoicePattern = /female|woman|zira|samantha|karen|susan|heera|veena|lekha|priya|neerja|google.*female/i;
+  const englishVoices = voices.filter(voice => /^en(?:-|$)/i.test(voice.lang));
+  utterance.voice = englishVoices.find(voice => /en-IN/i.test(voice.lang) && femaleVoicePattern.test(`${voice.name} ${voice.voiceURI}`)) ||
+    englishVoices.find(voice => femaleVoicePattern.test(`${voice.name} ${voice.voiceURI}`)) ||
+    englishVoices.find(voice => /en-IN/i.test(voice.lang)) || null;
+  activeSpeakButton = button; setSpeakButton(button, true);
+  utterance.onend = utterance.onerror = () => {
+    if (activeSpeakButton === button) { setSpeakButton(button, false); activeSpeakButton = null; }
+  };
   speechSynthesis.speak(utterance);
 });
 
@@ -576,7 +657,12 @@ mic.addEventListener('click', async () => {
 
 fetch('/api/profiles').then(r => r.json()).then(list => {
   profiles = list;
-  for (const p of list) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.label; $('#profile').appendChild(o); }
+  for (const p of list) {
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.minor ? `${p.label} · ${p.minor} minor` : p.label;
+    $('#profile').appendChild(o);
+  }
 });
 fetch('/api/health').then(r => r.json()).then(h => {
   const msgs = [];

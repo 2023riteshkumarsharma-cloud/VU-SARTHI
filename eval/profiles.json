@@ -1,7 +1,7 @@
 [
  {
   "id": "student_a",
-  "label": "Student A – 2024 batch, backlog in Data Structures",
+  "label": "Aarav Sharma – 2024 batch, semester 5",
   "batch": 2024,
   "current_semester": 5,
   "cgpa": 6.4,
@@ -36,13 +36,13 @@
    "MATH204": "B+",
    "DATA103": "A"
   },
-  "minor": null,
+  "minor": "Law",
   "notes": "Mirrors the assignment example: passed Linear Algebra (MATH204) and Programming in Python (DATA103), failed Data Structures (COMP201).",
   "credits_earned": 57
  },
  {
   "id": "student_b",
-  "label": "Student B – 2023 batch, on track, Psychology minor",
+  "label": "Ananya Iyer – 2023 batch, semester 7",
   "batch": 2023,
   "current_semester": 7,
   "cgpa": 7.8,
@@ -108,7 +108,7 @@
  },
  {
   "id": "student_c",
-  "label": "Student C – 2025 batch, CGPA below progression threshold",
+  "label": "Rohan Mehta – 2025 batch, semester 3",
   "batch": 2025,
   "current_semester": 3,
   "cgpa": 3.85,
@@ -138,38 +138,38 @@
    "MATH203": "F",
    "COMP201": "F"
   },
-  "minor": null,
+  "minor": "Design",
   "notes": "CGPA after semester 2 is below the 4.00 needed to register for semester 3.",
   "credits_earned": 41
  },
  {
   "id": "student_d",
-  "label": "Student D – 2024 batch, course record not provided",
+  "label": "Diya Nair – 2024 batch, semester 5",
   "batch": 2024,
   "current_semester": 5,
   "cgpa": null,
   "completed_courses": null,
   "failed_courses": null,
   "grades": {},
-  "minor": null,
+  "minor": "Start-up",
   "notes": "Only the batch is known: tests follow-up questions for missing information."
  },
  {
   "id": "student_e",
-  "label": "Student E – 2026 batch fresher",
+  "label": "Ishaan Kapoor – 2026 batch, semester 1",
   "batch": 2026,
   "current_semester": 1,
   "cgpa": null,
   "completed_courses": [],
   "failed_courses": [],
   "grades": {},
-  "minor": null,
+  "minor": "Economics",
   "notes": "First semester, nothing completed yet.",
   "credits_earned": 0
  },
  {
   "id": "student_f",
-  "label": "Student F – 2022 batch, completed all 8 semesters",
+  "label": "Kabir Rao – 2022 batch, semester 8",
   "batch": 2022,
   "current_semester": 8,
   "cgpa": 8.62,
@@ -236,7 +236,7 @@
  },
  {
   "id": "student_g",
-  "label": "Student G – 2024 batch, FA (attendance shortage) in Machine Learning",
+  "label": "Meera Krishnan – 2024 batch, semester 6",
   "batch": 2024,
   "current_semester": 6,
   "cgpa": 6.9,
@@ -292,7 +292,7 @@
  },
  {
   "id": "student_h",
-  "label": "Student H – 2025 batch, Finance minor, failed Probability & Statistics",
+  "label": "Priya Desai – 2025 batch, semester 3",
   "batch": 2025,
   "current_semester": 3,
   "cgpa": 5.6,
@@ -324,5 +324,30 @@
   "minor": "Finance",
   "notes": "Needs MATH203 for Advanced EDA (DATA209) and Advanced Statistical Analysis (MATH206).",
   "credits_earned": 45
+ },
+ {
+  "id": "student_i",
+  "label": "Arjun Patel – 2023 batch, semester 4",
+  "batch": 2023,
+  "current_semester": 4,
+  "cgpa": null,
+  "completed_courses": null,
+  "failed_courses": null,
+  "grades": {},
+  "minor": "Marketing",
+  "notes": "Synthetic profile for interface demonstration; transcript details are not provided."
+ },
+ {
+  "id": "student_j",
+  "label": "Aditi Menon – 2026 batch, semester 1",
+  "batch": 2026,
+  "current_semester": 1,
+  "cgpa": null,
+  "completed_courses": [],
+  "failed_courses": [],
+  "grades": {},
+  "minor": "Psychology",
+  "notes": "Synthetic profile for interface demonstration; transcript details are not provided.",
+  "credits_earned": 0
  }
 ]

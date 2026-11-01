@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from . import config
 
-app = FastAPI(title="VU AI Academic Advisor")
+app = FastAPI(title="VU SARTHI")
 STATIC = config.ROOT / "advisor" / "static"
 PROFILES = {p["id"]: p for p in json.loads((config.ROOT / "eval" / "profiles.json").read_text(encoding="utf-8"))}
 ACCESS_PASSWORD = os.getenv("ADVISOR_ACCESS_PASSWORD", "")

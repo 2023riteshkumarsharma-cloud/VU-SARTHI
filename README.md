@@ -1,4 +1,4 @@
-# VU AI Academic Advisor (DATA308)
+# VU SARTHI — Academic Advisor (DATA308)
 
 A grounded academic advisor for Vidyashilp University's B.Tech (DS) programme, batches 2022–2026. It answers exact
 curriculum questions (by batch, semester, month, credits, L-T-P, prerequisites, baskets, minors) and policy questions
