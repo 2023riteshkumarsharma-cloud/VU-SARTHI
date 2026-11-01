@@ -11,13 +11,13 @@ information is missing and flags conflicting sources. You can type or speak.
 pip install -r requirements.txt
 python -m advisor.ingest.build          # rebuild knowledge_base/ from the 4 source files (fails if validation fails)
 python -m pytest tests                  # 10 tests, no credentials needed
-cp .env.example .env                    # fill in Azure OpenAI endpoint, key, deployment names
-python -m advisor.ingest.build          # re-run once .env is filled: adds dense embeddings (Bedrock Titan v2 or Azure; cached)
+cp .env.example .env                    # fill in the API provider credentials you have
+python -m advisor.ingest.build          # re-run once .env is filled: adds dense embeddings (Bedrock, Azure, or OpenAI; cached)
 uvicorn advisor.server:app              # open http://127.0.0.1:8000
 python eval/run_eval.py --judge         # 4-stage evaluation -> eval/results/
 ```
 
-Without `.env` the web app runs in **preview mode**: it shows the passages retrieval would ground an answer in.
+Chat supports Azure OpenAI, OpenAI, Groq, and Gemini through the credentials in `.env`; `LLM_PROVIDER=auto` chooses a configured provider (Azure first). AWS Bedrock is optional for embeddings. Without chat credentials the web app runs in **preview mode**: it shows the passages retrieval would ground an answer in.
 
 ## Data: what is converted into what
 
@@ -52,6 +52,18 @@ PDF ───┘                                  └→ curated Markdown → ch
 question (text | voice → Azure transcription) → LangGraph: agent (LLM + 11 tools) ⇄ tools → verify → answer + [S#] sources
 ```
 
+### Optional extensions (no additional API credentials)
+
+- **Synthetic records:** `eval/profiles.json` remains the source of demonstration student profiles. The profile panel can open a generated HTML transcript sample for each profile. It is explicitly marked synthetic and is not an official student record.
+- **Speech output:** each answer can be read aloud using the browser's built-in Speech Synthesis API. This runs locally in the browser and uses no AI service. Browser voices and pronunciation vary; verify course codes and regulation details in the written answer.
+- **Course infographic:** a selected synthetic profile can open an SVG course structure for its next semester. The SVG is rendered from the existing deterministic semester-plan data; it does not use an image model. The plan view also offers a deterministic draft pipeline: curriculum retrieval → eligibility checks → credit summary → flagged recommendation → verification. It does not register students. Confirm eligibility, conflicts, and registration with the university.
+- **Source chunks:** source cards continue to link to the original files. Excel-backed cards also offer “Open the data chunk used,” showing the exact row or passage returned as evidence. The chunk link is generated from the tool's returned evidence snippet.
+- **Existing voice input:** audio is transcribed using a configured Azure/OpenAI transcription service, or browser speech recognition when available. This is an input modality and still depends on browser support, microphone permission, and (for server transcription) the configured provider's quota.
+
+**Models/tools and limits:** chat generation uses the configured existing provider (Azure OpenAI, OpenAI, Groq, or Gemini); retrieval uses BM25 and, when an existing compatible embedding index is available, dense embeddings. The deterministic planner uses Python tools over the validated SQLite curriculum and profile JSON. Browser speech uses the browser's speech synthesis engine. The course map uses generated SVG. No new API keys or model services are required for speech output, the infographic, synthetic records, or the optional planning pipeline. The planner can surface bad/missing source data but cannot decide policy exceptions; people remain responsible for official eligibility decisions and registration.
+
+The planner is intended to be compared with the existing `full` RAG + tools evaluation stage using the same synthetic profiles and cases. It is a transparent sequence of deterministic tool calls rather than autonomous agents, so its main benefit is a repeatable per-student draft plan; its limitations include the current coverage and quality of the source data and the profile's completeness.
+
 - **Tools** (`advisor/tools.py`): pure Python over read-only SQLite:
   - `lookup_courses`, `course_details`, `semester_plan`, `credit_structure`, `minor_info`
   - `prerequisite_chain`, `academic_calendar`
@@ -62,7 +74,7 @@ question (text | voice → Azure transcription) → LangGraph: agent (LLM + 11 t
   produced and computes flags for follow-up, conflict and insufficient information.
 - **Adding a format** (DOCX/PPTX/HTML/CSV/OCR): write `extract(path) -> list[SourceUnit]` and register it in
   `advisor/ingest/__init__.py`. Re-ingestion is hash-tracked (`sources.json`), and embeddings are cached per chunk text.
-- **Embeddings**: AWS Bedrock `amazon.titan-embed-text-v2:0` (1024-d) when `BEDROCK_EMBED_MODEL` + AWS keys are set, else Azure OpenAI. The model id is stored with the vectors so queries always use the same model; the weak-evidence cut-off (cosine < 0.30) was calibrated on in-scope vs off-topic probes.
+- **Embeddings**: AWS Bedrock `amazon.titan-embed-text-v2:0` (1024-d) when `BEDROCK_EMBED_MODEL` + AWS keys are set, else Azure OpenAI or OpenAI when configured. Without an embedding provider, retrieval falls back to BM25. The model id is stored with the vectors so queries always use the same model; the weak-evidence cut-off (cosine < 0.30) was calibrated on in-scope vs off-topic probes.
 - **Deliberately not used**: Neo4j/GraphRAG/RAPTOR, a reranker, multi-agent orchestration. The corpus is about
   700 chunks, so an in-memory index and a prerequisite dict answer every query in the eval set.
 

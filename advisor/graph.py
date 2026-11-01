@@ -44,10 +44,22 @@ class State(TypedDict):
 
 @lru_cache(maxsize=2)  # one client per mode: re-creating it costs ~1.5 s and a new TLS handshake per call
 def llm(bind_tools=True):
-    from langchain_openai import AzureChatOpenAI
+    from langchain_openai import AzureChatOpenAI, ChatOpenAI
     kw = {} if os.getenv("AZURE_OPENAI_TEMPERATURE", "0") == "default" else {"temperature": float(os.getenv("AZURE_OPENAI_TEMPERATURE", "0"))}
-    model = AzureChatOpenAI(azure_endpoint=config.AZURE_ENDPOINT, api_key=config.AZURE_API_KEY, api_version=config.AZURE_API_VERSION,
-                            azure_deployment=config.CHAT_DEPLOYMENT, timeout=40, max_retries=2, **kw)
+    provider = config.chat_provider()
+    if provider == "azure":
+        model = AzureChatOpenAI(azure_endpoint=config.AZURE_ENDPOINT, api_key=config.AZURE_API_KEY, api_version=config.AZURE_API_VERSION,
+                                azure_deployment=config.CHAT_DEPLOYMENT, timeout=40, max_retries=2, **kw)
+    elif provider == "openai":
+        model = ChatOpenAI(model=config.OPENAI_MODEL, api_key=config.OPENAI_API_KEY, timeout=40, max_retries=2, **kw)
+    elif provider == "groq":
+        model = ChatOpenAI(model=os.getenv("GROQ_MODEL", "").strip() or config.GROQ_MODEL, api_key=config.GROQ_API_KEY,
+                           base_url="https://api.groq.com/openai/v1", timeout=40, max_retries=2, **kw)
+    elif provider == "gemini":
+        model = ChatOpenAI(model=os.getenv("GEMINI_MODEL", "").strip() or config.GEMINI_MODEL, api_key=config.GEMINI_API_KEY,
+                           base_url="https://generativelanguage.googleapis.com/v1beta/openai/", timeout=40, max_retries=2, **kw)
+    else:
+        raise RuntimeError("No chat API provider is configured. Set Azure, OpenAI, Groq, or Gemini credentials in .env.")
     return model.bind_tools(LC_TOOLS) if bind_tools else model
 
 

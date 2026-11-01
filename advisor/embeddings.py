@@ -17,6 +17,8 @@ def model_id():
         return f"bedrock:{config.BEDROCK_EMBED_MODEL}"
     if config.azure_ready(config.EMBED_DEPLOYMENT):
         return f"azure:{config.EMBED_DEPLOYMENT}"
+    if config.OPENAI_API_KEY:
+        return f"openai:{config.OPENAI_EMBED_MODEL}"
     return None
 
 
@@ -43,11 +45,17 @@ def embed(texts):
     if mid.startswith("bedrock:"):  # Titan embeds one text per call -> parallelise
         with ThreadPoolExecutor(max_workers=8) as ex:
             vecs = list(ex.map(_titan, texts))
-    else:
+    elif mid.startswith("azure:"):
         from openai import AzureOpenAI
         client = AzureOpenAI(azure_endpoint=config.AZURE_ENDPOINT, api_key=config.AZURE_API_KEY, api_version=config.AZURE_API_VERSION)
         vecs = []
         for s in range(0, len(texts), 64):
             vecs += [d.embedding for d in client.embeddings.create(model=config.EMBED_DEPLOYMENT, input=texts[s:s + 64]).data]
+    else:
+        from openai import OpenAI
+        client = OpenAI(api_key=config.OPENAI_API_KEY)
+        vecs = []
+        for s in range(0, len(texts), 64):
+            vecs += [d.embedding for d in client.embeddings.create(model=config.OPENAI_EMBED_MODEL, input=texts[s:s + 64]).data]
     v = np.array(vecs, dtype="float32")
     return v / np.linalg.norm(v, axis=1, keepdims=True)

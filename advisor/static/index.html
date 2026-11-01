@@ -150,6 +150,8 @@
   .src { padding: 10px 0 10px 10px; margin-left: -10px; border-top: 1px solid var(--line); border-left: 2px solid transparent; transition: background .3s var(--ease), border-color .3s; }
   .src .c { font-size: 14px; font-weight: 600; color: var(--navy-deep); line-height: 1.45; }
   .src .c b { color: var(--crimson); margin-right: 8px; font-variant-numeric: tabular-nums; }
+  .src .c a, .src .links a { color: var(--navy); text-underline-offset: 3px; }
+  .src .links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 5px; font-size: 12.5px; }
   .src .s { margin-top: 4px; font-size: 13px; line-height: 1.5; color: var(--muted); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .src.hl { background: var(--crimson-soft); border-left-color: var(--crimson); }
 
@@ -316,7 +318,12 @@
     <label for="profile">Answer as</label>
     <select id="profile"><option value="">No profile – ask me</option></select>
     <div class="pbody" id="pinfo"></div>
-    <div class="pfoot">Profiles are synthetic records for demonstration. Switching profile starts a new conversation.</div>
+    <div class="pfoot">Profiles are synthetic records for demonstration. Switching profile starts a new conversation.
+      <p><a id="transcriptLink" href="#" target="_blank" rel="noopener" hidden>Open synthetic transcript sample</a></p>
+      <p><a id="registrationLink" href="#" target="_blank" rel="noopener" hidden>Open draft registration record</a></p>
+      <button class="btn" id="planButton" type="button" disabled>Build draft course plan</button>
+      <p class="pnotes">The draft uses deterministic curriculum and eligibility checks. Confirm decisions with the university.</p>
+    </div>
   </aside>
 </div>
 <script>
@@ -360,8 +367,21 @@ function sourcesBlock(list) {
   d.innerHTML = `<summary>${ICON.book}<span>${list.length} source${list.length > 1 ? 's' : ''} cited</span>${ICON.chev}</summary><ol></ol>`;
   for (const s of list) {
     const li = document.createElement('li'); li.className = 'src'; li.dataset.id = s.id;
-    li.innerHTML = '<div class="c"><b></b></div><div class="s"></div>';
-    li.querySelector('b').textContent = s.id; li.querySelector('.c').append(s.citation);
+    li.innerHTML = '<div class="c"><b></b><span class="citation"></span></div><div class="s"></div>';
+    li.querySelector('b').textContent = s.id;
+    const citation = li.querySelector('.citation'), links = s.links || [];
+    if (links.length === 1) {
+      const a = document.createElement('a'); a.href = links[0].url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.textContent = s.citation; a.title = links[0].label; citation.appendChild(a);
+    } else citation.textContent = s.citation;
+    if (links.length > 1) {
+      const linkRow = document.createElement('div'); linkRow.className = 'links';
+      for (const link of links) {
+        const a = document.createElement('a'); a.href = link.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = link.label;
+        linkRow.appendChild(a);
+      }
+      li.appendChild(linkRow);
+    }
     li.querySelector('.s').textContent = s.snippet || '';
     d.querySelector('ol').appendChild(li);
   }
@@ -400,6 +420,10 @@ async function ask(text) {
     out.innerHTML = citeify(md(d.answer));
     out.querySelectorAll('table').forEach(t => { const w = document.createElement('div'); w.className = 'tablewrap'; t.before(w); w.appendChild(t); });
     const m = document.createElement('div'); m.className = 'meta'; m.innerHTML = meta.join(''); turn.appendChild(m);
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+      const speak = document.createElement('button'); speak.className = 'btn'; speak.type = 'button'; speak.dataset.speak = 'true';
+      speak.textContent = 'Read answer aloud'; m.appendChild(speak);
+    }
     const s = sourcesBlock(sources); if (s) turn.appendChild(s);
   } catch (err) {
     out.innerHTML = `<div class="error" role="alert">The advisor could not answer: ${esc(err.message)}<br><button class="btn" type="button">Try again</button></div>`;
@@ -436,7 +460,10 @@ function renderProfile(p) {
   const box = $('#pinfo');
   $('#ptoggle .who').textContent = p ? p.label.split(' – ')[0] : 'No profile';
   $('#ptoggle').setAttribute('aria-label', 'Student profile: ' + (p ? p.label.split(' – ')[0] : 'none'));
-  if (!p) { box.innerHTML = '<p class="intro">Choose a synthetic student to get personalised answers about eligibility and next semester’s courses.</p>'; return; }
+  if (!p) {
+    box.innerHTML = '<p class="intro">Choose a synthetic student to get personalised answers about eligibility and next semester’s courses.</p>';
+    $('#transcriptLink').hidden = true; $('#registrationLink').hidden = true; $('#planButton').disabled = true; return;
+  }
   const [name, desc] = p.label.split(' – ');
   const failed = p.failed_courses || [];
   box.innerHTML = `
@@ -451,8 +478,51 @@ function renderProfile(p) {
     <div class="psec"><h3>Backlogs</h3>${failed.length ? `<div class="codes">${failed.map(c => `<span class="code">${esc(c)}</span>`).join('')}</div>` : '<span class="clear">None on record</span>'}</div>
     <div class="psec"><h3>Minor</h3><p class="pnotes">${p.minor ? esc(p.minor) : 'None declared'}</p></div>
     ${p.notes ? `<div class="psec"><h3>Notes</h3><p class="pnotes">${esc(p.notes)}</p></div>` : ''}`;
+  $('#transcriptLink').href = `/api/profiles/${encodeURIComponent(p.id)}/transcript`;
+  $('#registrationLink').href = `/api/profiles/${encodeURIComponent(p.id)}/registration`;
+  $('#transcriptLink').hidden = false;
+  $('#registrationLink').hidden = false;
+  $('#planButton').disabled = false;
 }
 renderProfile(null);
+
+$('#planButton').addEventListener('click', async () => {
+  const id = $('#profile').value;
+  if (!id) return;
+  const button = $('#planButton'); button.disabled = true; button.textContent = 'Building…';
+  try {
+    const response = await fetch(`/api/plan/${encodeURIComponent(id)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || response.statusText);
+    const turn = add('bot', citeify(md(data.answer)));
+    const m = document.createElement('div'); m.className = 'meta';
+    m.innerHTML = `<span>Deterministic advising pipeline</span><span>${esc((data.flags?.pipeline || []).join(' → '))}</span>`;
+    const visual = document.createElement('a'); visual.href = `/api/plan/${encodeURIComponent(id)}/infographic.svg`;
+    visual.target = '_blank'; visual.rel = 'noopener'; visual.textContent = 'Open course structure infographic'; m.appendChild(visual);
+    turn.appendChild(m);
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+      const speak = document.createElement('button'); speak.className = 'btn'; speak.type = 'button'; speak.dataset.speak = 'true';
+      speak.textContent = 'Read answer aloud'; m.appendChild(speak);
+    }
+    const source = sourcesBlock(data.sources || []); if (source) turn.appendChild(source);
+  } catch (error) {
+    add('bot', `<div class="error" role="alert">Could not build the draft plan: ${esc(error.message)}</div>`);
+  } finally { button.disabled = false; button.textContent = 'Build draft course plan'; }
+});
+
+log.addEventListener('click', e => {
+  const button = e.target.closest('[data-speak]');
+  if (!button) return;
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+  if (button.textContent === 'Stop speaking') { speechSynthesis.cancel(); button.textContent = 'Read answer aloud'; return; }
+  if (speechSynthesis.speaking) speechSynthesis.cancel();
+  const content = button.closest('.turn')?.querySelector('.answer')?.innerText || '';
+  const utterance = new SpeechSynthesisUtterance(content);
+  utterance.lang = 'en-IN';
+  button.textContent = 'Stop speaking';
+  utterance.onend = utterance.onerror = () => { button.textContent = 'Read answer aloud'; };
+  speechSynthesis.speak(utterance);
+});
 
 $('#profile').addEventListener('change', e => {
   const p = profiles.find(x => x.id === e.target.value);
@@ -492,7 +562,12 @@ mic.addEventListener('click', async () => {
         const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText);
         setMic('idle');
         if (d.text?.trim()) ask(d.text.trim());
-      } catch (err) { voiceError(`Voice input failed – ${err.message}`); }
+      } catch (err) {
+        if (BrowserSTT) {
+          add('bot', `<div class="note">Server transcription failed (${esc(err.message)}). Switching to browser speech recognition; please say your question again.</div>`);
+          setMic('idle'); browserListen();
+        } else voiceError(`Voice input failed – ${err.message}. You can still type your question.`);
+      }
       finally { mic.disabled = false; }
     };
     rec.start(); setMic('rec');
@@ -505,9 +580,9 @@ fetch('/api/profiles').then(r => r.json()).then(list => {
 });
 fetch('/api/health').then(r => r.json()).then(h => {
   const msgs = [];
-  if (!h.chat) msgs.push('Azure OpenAI chat is not configured – running in preview mode (retrieval only). Fill in .env and restart.');
+  if (!h.chat) msgs.push('No chat API provider is configured – running in preview mode (retrieval only). Fill in .env and restart.');
   serverSTT = h.transcription;
-  if (!h.transcription && !BrowserSTT) msgs.push('Voice input needs an Azure transcription deployment or a Chrome/Edge browser.');
+  if (!h.transcription && !BrowserSTT) msgs.push('Voice input needs an Azure transcription deployment, OPENAI_API_KEY, or a Chrome/Edge browser.');
   if (msgs.length) { $('#banner').textContent = msgs.join(' '); $('#banner').style.display = 'block'; }
   if (!h.transcription && !BrowserSTT) { mic.disabled = true; mic.title = 'Voice input is unavailable in this browser'; }
 });
