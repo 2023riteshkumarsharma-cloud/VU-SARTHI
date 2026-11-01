@@ -17,6 +17,25 @@ uvicorn advisor.server:app              # open http://127.0.0.1:8000
 python eval/run_eval.py --judge         # 4-stage evaluation -> eval/results/
 ```
 
+## Host the dashboard on Render
+
+The repository includes `render.yaml` for a Render web service. In Render, choose **New → Blueprint**, connect
+`gsv3245-cpu/Advisor_2`, and select the `main` branch. Render installs `requirements.txt`, starts Uvicorn on its
+assigned public port, and checks `/api/health`. The SQLite knowledge base, embeddings, source workbooks, and handbook
+files are included in this repository; the service does not need a persistent disk for its read-only advising data.
+
+During Blueprint setup, enter these values in Render's secret prompts using the credentials already configured for
+your local app: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_CHAT_DEPLOYMENT`, `OPENAI_API_KEY`,
+and a new strong `ADVISOR_ACCESS_PASSWORD`. Never commit `.env` or paste API values into `render.yaml`. The browser's
+HTTP Basic Auth prompt uses username `advisor` and the password you set. The password gate protects the hosted demo;
+it is a shared-password classroom prototype, not per-student authentication. Keep all records synthetic and do not
+use this deployment for real student data. The free web service may sleep when idle and is intended for demonstration,
+not production availability.
+
+After the first deployment, Render shows the public URL on the service page. Subsequent pushes to `main` deploy
+automatically. If chat or transcription is unavailable, check the service's Environment and Logs pages without
+adding credentials to the repository.
+
 Chat supports Azure OpenAI, OpenAI, Groq, and Gemini through the credentials in `.env`; `LLM_PROVIDER=auto` chooses a configured provider (Azure first). AWS Bedrock is optional for embeddings. Without chat credentials the web app runs in **preview mode**: it shows the passages retrieval would ground an answer in.
 
 ## Data: what is converted into what

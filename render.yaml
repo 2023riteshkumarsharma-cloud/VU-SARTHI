@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: advisor-2
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn advisor.server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: LLM_PROVIDER
+        value: azure
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_CHAT_DEPLOYMENT
+        sync: false
+      - key: AZURE_OPENAI_API_VERSION
+        value: 2024-10-21
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ADVISOR_ACCESS_PASSWORD
+        sync: false

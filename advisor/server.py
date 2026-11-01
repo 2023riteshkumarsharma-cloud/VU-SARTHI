@@ -2,13 +2,16 @@
 
     uvicorn advisor.server:app --reload        # then open http://127.0.0.1:8000
 """
+import base64
 import json
+import os
 import re
+import secrets
 import time
 import uuid
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -17,10 +20,30 @@ from . import config
 app = FastAPI(title="VU AI Academic Advisor")
 STATIC = config.ROOT / "advisor" / "static"
 PROFILES = {p["id"]: p for p in json.loads((config.ROOT / "eval" / "profiles.json").read_text(encoding="utf-8"))}
+ACCESS_PASSWORD = os.getenv("ADVISOR_ACCESS_PASSWORD", "")
 MAX_AUDIO_BYTES = 25 * 1024 * 1024  # Azure OpenAI transcription limit
 SUPPORTED_BATCHES = {2022, 2023, 2024, 2025, 2026}
 PENDING_BATCH_QUESTIONS = {}
 SEMESTER_ONE_RE = re.compile(r"\b(?:semester|semster|sem)\s*(?:1|one|first)(?:st)?\b|\b(?:first|1st)\s+semester\b", re.I)
+
+
+@app.middleware("http")
+async def protect_hosted_demo(request: Request, call_next):
+    """Optional shared-password gate for hosted demos; local runs stay unchanged by default."""
+    if not ACCESS_PASSWORD or request.url.path == "/api/health":
+        return await call_next(request)
+    scheme, _, encoded = request.headers.get("authorization", "").partition(" ")
+    try:
+        decoded = base64.b64decode(encoded, validate=True).decode("utf-8") if scheme.lower() == "basic" else ""
+        username, separator, password = decoded.partition(":")
+        authorized = bool(separator and secrets.compare_digest(username.encode("utf-8"), b"advisor") and
+                          secrets.compare_digest(password.encode("utf-8"), ACCESS_PASSWORD.encode("utf-8")))
+    except (ValueError, UnicodeDecodeError):
+        authorized = False
+    if not authorized:
+        return Response("Sign in to use this academic advisor demo.", status_code=401,
+                        headers={"WWW-Authenticate": 'Basic realm="VU Academic Advisor demo"'})
+    return await call_next(request)
 
 
 class ChatIn(BaseModel):
