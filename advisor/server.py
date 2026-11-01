@@ -4,6 +4,7 @@
 """
 import base64
 import json
+import mimetypes
 import os
 import re
 import secrets
@@ -147,7 +148,11 @@ def open_source(source_key: str):
     path = config.SOURCES.get(source_key)
     if path is None or not path.is_file():
         raise HTTPException(404, "Source document not found")
-    return FileResponse(path)
+    return Response(
+        content=path.read_bytes(),
+        media_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
+    )
 
 
 @app.get("/api/profiles")
