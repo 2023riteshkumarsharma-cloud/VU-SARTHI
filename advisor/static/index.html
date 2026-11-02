@@ -124,6 +124,14 @@
   .turn.bot + .turn.user { padding-top: 30px; border-top: 1px solid var(--line); }
   .author { display: block; height: 30px; width: auto; margin-bottom: 12px; }
   .answer { overflow-wrap: anywhere; }
+  .response-visual { margin: 18px 0 0; }
+  .response-visual img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; }
+  .response-visual figcaption { margin-top: 8px; font-size: 13px; }
+  .response-visual .image-error { color: var(--warn); }
+  .document-list { display: grid; gap: 10px; margin: 16px 0; }
+  .document-card { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.72); }
+  .document-card strong { flex: 1 1 240px; overflow-wrap: anywhere; }
+  .document-card a, .document-card button { font: inherit; font-size: 13px; }
   .answer > :first-child { margin-top: 0; } .answer > :last-child { margin-bottom: 0; }
   .answer p { margin: .6em 0; max-width: 70ch; text-wrap: pretty; }
   .answer h1, .answer h2, .answer h3, .answer h4 { color: var(--navy-deep); line-height: 1.3; letter-spacing: -.01em; margin: 1.2em 0 .4em; }
@@ -202,9 +210,12 @@
   #mic { border-left: 1px solid var(--line); border-radius: 0; }
   #mic.rec { background: var(--crimson); color: #fff; animation: ring 1.4s var(--ease) infinite; }
   #mic.busy svg { animation: spin 1s linear infinite; }
+  .voice-toggle { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--navy); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+  .voice-toggle:hover, .voice-toggle[aria-pressed="true"] { border-color: var(--crimson); color: var(--crimson); background: var(--crimson-soft); }
+  .voice-toggle:disabled { opacity: .5; cursor: not-allowed; }
   #send { height: 70px; min-width: 88px; border-radius: 22px; padding: 0 18px; justify-content: center; }
   #send .lbl { display: inline; }
-  .hint { max-width: calc(var(--read) + 32px); margin: 14px auto 0; display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
+  .hint { max-width: calc(var(--read) + 32px); margin: 14px auto 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
   .hint #vstatus { color: var(--crimson); font-weight: 600; }
 
   /* ---------- student profile panel ---------- */
@@ -345,11 +356,15 @@
         <label class="sr" for="q">Your question</label>
         <textarea id="q" rows="1" placeholder="Ask your academic question…" title="Enter to send, Shift+Enter for a new line"></textarea>
         <button class="icon" id="mic" type="button" aria-label="Speak your question" title="Speak your question"></button>
+        <button class="voice-toggle" id="voiceMode" type="button" aria-pressed="false">Start voice chat</button>
         <button class="btn primary" id="send" type="submit" aria-label="Send question">
           <span class="lbl">Enter</span>
         </button>
       </form>
-      <div class="hint"><span id="vstatus" role="status"></span><span class="keys">Enter to send · Shift + Enter for a new line</span></div>
+      <div class="hint">
+        <span id="vstatus" role="status"></span>
+        <span class="keys">Enter to send · Shift + Enter for a new line</span>
+      </div>
     </div>
   </main>
   <button class="scrim" id="scrim" type="button" tabindex="-1" aria-label="Close student profile"></button>
@@ -372,8 +387,9 @@
 </div>
 <script>
 const $ = s => document.querySelector(s);
-const log = $('#log'), col = $('#log .col'), q = $('#q'), send = $('#send'), mic = $('#mic'), vstatus = $('#vstatus');
-let thread = crypto.randomUUID(), profiles = [], busy = false, activeSpeakButton = null;
+const log = $('#log'), col = $('#log .col'), q = $('#q'), send = $('#send'), mic = $('#mic'), vstatus = $('#vstatus'), voiceMode = $('#voiceMode');
+let thread = crypto.randomUUID(), profiles = [], busy = false, activeSpeakButton = null, activeUtterance = null, lastAnswer = '', lastQuestion = '';
+let voiceConversation = false, voiceRestartTimer = null;
 
 const ICON = {
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
@@ -395,6 +411,40 @@ function setSpeakButton(button, speaking) {
   button.setAttribute('aria-label', speaking ? 'Stop reading answer' : 'Listen to answer');
   button.title = speaking ? 'Stop reading answer' : 'Listen to answer';
 }
+function cancelSpeech() {
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  activeUtterance = null;
+  if (activeSpeakButton) setSpeakButton(activeSpeakButton, false);
+  activeSpeakButton = null;
+}
+function speakText(text, button = null, onDone = null) {
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+    if (onDone) onDone();
+    return;
+  }
+  cancelSpeech();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-IN';
+  const voices = speechSynthesis.getVoices();
+  const femaleVoicePattern = /female|woman|zira|samantha|karen|susan|heera|veena|lekha|priya|neerja|google.*female/i;
+  const englishVoices = voices.filter(voice => /^en(?:-|$)/i.test(voice.lang));
+  utterance.voice = englishVoices.find(voice => /en-IN/i.test(voice.lang) && femaleVoicePattern.test(`${voice.name} ${voice.voiceURI}`)) ||
+    englishVoices.find(voice => femaleVoicePattern.test(`${voice.name} ${voice.voiceURI}`)) ||
+    englishVoices.find(voice => /en-IN/i.test(voice.lang)) || null;
+  activeUtterance = utterance;
+  activeSpeakButton = button;
+  if (button) setSpeakButton(button, true);
+  const finish = () => {
+    if (activeUtterance !== utterance) return;
+    activeUtterance = null;
+    if (activeSpeakButton === button && button) setSpeakButton(button, false);
+    activeSpeakButton = null;
+    if (onDone) onDone();
+  };
+  utterance.onend = finish;
+  utterance.onerror = finish;
+  speechSynthesis.speak(utterance);
+}
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const md = t => (window.marked && window.DOMPurify) ? DOMPurify.sanitize(marked.parse(t)) : esc(t).replace(/\n/g, '<br>');
 const citeify = html => html.replace(/\[(S\d+)\]/g, (_, id) => `<button type="button" class="cite" data-src="${id}" aria-label="Source ${id}">${id}</button>`);
@@ -403,8 +453,10 @@ const scrollEnd = () => { log.scrollTop = log.scrollHeight; };
 function setMic(state) {  // idle | rec | busy
   mic.innerHTML = state === 'rec' ? ICON.stop : state === 'busy' ? ICON.wait : ICON.mic;
   mic.classList.toggle('rec', state === 'rec'); mic.classList.toggle('busy', state === 'busy');
-  mic.setAttribute('aria-label', state === 'rec' ? 'Stop recording' : state === 'busy' ? 'Transcribing' : 'Speak your question');
-  vstatus.textContent = state === 'rec' ? 'Listening… tap the square to stop' : state === 'busy' ? 'Transcribing your question…' : '';
+  mic.setAttribute('aria-label', state === 'rec' ? (voiceConversation ? 'Listening for your question' : 'Stop recording') :
+    state === 'busy' ? (voiceConversation ? 'Processing your question' : 'Transcribing') : 'Speak your question');
+  vstatus.textContent = state === 'rec' ? (voiceConversation ? 'Listening for your question…' : 'Listening… tap the square to stop') :
+    state === 'busy' ? (voiceConversation ? 'Thinking…' : 'Transcribing your question…') : '';
 }
 setMic('idle');
 
@@ -445,6 +497,32 @@ function sourcesBlock(list) {
   return d;
 }
 
+function showDocuments(target, files) {
+  const list = document.createElement('section'); list.className = 'document-list';
+  list.setAttribute('aria-label', 'Generated documents');
+  for (const file of files) {
+    const card = document.createElement('div'); card.className = 'document-card';
+    const name = document.createElement('strong'); name.textContent = file.name;
+    const format = document.createElement('span'); format.textContent = file.format;
+    let downloadUrl = file.download_url;
+    const dataMatch = /^data:(application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document);base64,([A-Za-z0-9+/=]+)$/.exec(file.data_url || '');
+    if (dataMatch) {
+      const binary = atob(dataMatch[2]);
+      const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+      downloadUrl = URL.createObjectURL(new Blob([bytes], { type: dataMatch[1] }));
+    }
+    const download = document.createElement('a'); download.href = downloadUrl;
+    download.download = file.name; download.textContent = 'Download';
+    const convert = document.createElement('button'); convert.type = 'button'; convert.className = 'btn';
+    const alternateFormat = file.format === 'PDF' ? 'Word (DOCX)' : 'PDF';
+    convert.textContent = `Generate as ${alternateFormat}`;
+    convert.addEventListener('click', () => ask(`Convert this into ${alternateFormat}`));
+    card.append(name, format, download, convert);
+    list.appendChild(card);
+  }
+  target.appendChild(list);
+}
+
 log.addEventListener('click', e => {
   const btn = e.target.closest('.cite'); if (!btn) return;
   const box = btn.closest('.turn')?.querySelector('details.sources'); if (!box) return;
@@ -457,34 +535,106 @@ log.addEventListener('click', e => {
 async function ask(text) {
   if (busy || !text.trim()) return;
   busy = true; send.disabled = true; q.value = ''; autosize();
+  if (voiceConversation && listening) listening.stop();
   const mine = add('user', esc(text));
   const turn = add('bot', '<span class="thinking"><i><b></b><b></b><b></b></i>Checking the handbook and workbooks…</span>');
   turn.setAttribute('aria-busy', 'true');
   const out = turn.querySelector('.answer');
   try {
-    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, thread_id: thread, profile_id: $('#profile').value || null }) });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText || 'The server did not respond');
-    const d = await r.json(); thread = d.thread_id;
+    const wantsImage = /\b(?:generate|create|make|draw|render|turn|convert|show|give|provide|want|need|visuali[sz]e)\b[\s\S]{0,80}\b(?:image|picture|infographic|visual(?:ization|isation)?|poster|chart|flowchart|mind\s*map|diagram)\b|\bimage\s+format\b|\b(?:as|into)\s+(?:an?\s+)?(?:image|picture|infographic|visual|poster|chart|diagram)\b|\b(?:image|picture|infographic|visual|chart|flowchart|mind\s*map|diagram)\b[\s\S]{0,50}\b(?:of|for|from|based on|showing)\b/i.test(text);
+    const refersToPrevious = /\b(?:this|that|above|previous|same|it|the response|the answer|the table|the comparison|the explanation|the data|entire explanation)\b/i.test(text);
+    const genericVisualRequest = /^(?:(?:please|can you|could you)\s+)?(?:(?:i\s+)?(?:want|need)\s+)?(?:generate|create|make|draw|render|show|give|visuali[sz]e)?\s*(?:me\s+)?(?:(?:an?|the)\s+)?(?:image|picture|infographic|visual(?:\s+representation)?|chart|flowchart|diagram|mind\s*map|table|comparison\s+table|org\s+chart|organizational\s+chart|organization\s+chart|organisation\s+chart)(?:\s+(?:image|picture|infographic|visual))?\s*[.!?]*$/i.test(text);
+    let d = { answer: '', sources: [], latency_ms: 0, flags: {} };
+    const showImage = (imageUrl, fileName = 'vu-sarthi-visual.svg') => {
+      if (typeof imageUrl !== 'string' || !(imageUrl.startsWith('data:image/svg+xml;base64,') || imageUrl.startsWith('blob:'))) {
+        throw new Error('The server did not return a valid SVG image.');
+      }
+      const figure = document.createElement('figure'); figure.className = 'response-visual';
+      const image = document.createElement('img'); image.src = imageUrl;
+      image.alt = 'Requested academic visual'; image.decoding = 'async';
+      const actions = document.createElement('figcaption');
+      const view = document.createElement('a'); view.href = imageUrl; view.target = '_blank'; view.rel = 'noopener'; view.textContent = 'View larger';
+      const download = document.createElement('a'); download.href = imageUrl;
+      download.download = fileName; download.textContent = 'Download image';
+      actions.append(view, document.createTextNode(' · '), download);
+      figure.append(image, actions);
+      out.replaceChildren(figure);
+    };
+    const createImage = async (answer, renderRequest = text) => {
+      const figure = document.createElement('figure'); figure.className = 'response-visual';
+      const status = document.createElement('figcaption'); status.textContent = 'Creating the requested visual…';
+      figure.appendChild(status); out.appendChild(figure);
+      try {
+        const imageResponse = await fetch('/api/response-image.svg', { method: 'POST',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer, request: renderRequest }) });
+        if (!imageResponse.ok) {
+          const detail = await imageResponse.json().catch(() => ({}));
+          throw new Error(detail.detail || imageResponse.statusText || 'The image could not be created');
+        }
+        const imageUrl = URL.createObjectURL(await imageResponse.blob());
+        showImage(imageUrl);
+      } catch (error) {
+        status.className = 'image-error'; status.setAttribute('role', 'alert');
+        status.textContent = `Could not create the visual: ${error.message}`;
+      }
+    };
+    if (wantsImage && (refersToPrevious || genericVisualRequest)) {
+      if (lastAnswer) {
+        d.answer = 'Visual generated from the previous advisor response.';
+        await createImage(lastAnswer, lastQuestion || text);
+      } else {
+        d.answer = 'What information would you like me to visualize? Ask a question first, or describe the information you want shown.';
+        out.textContent = d.answer;
+      }
+    } else {
+      const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, thread_id: thread, profile_id: $('#profile').value || null }) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText || 'The server did not respond');
+      d = await r.json(); thread = d.thread_id;
+      const f = d.flags || {};
+      d.sources = d.sources || [];
+      if (d.visual) {
+        showImage(d.visual.data_url, d.visual.file_name);
+        lastAnswer = ''; lastQuestion = '';
+      } else {
+        out.innerHTML = citeify(md(d.answer));
+        out.querySelectorAll('table').forEach(t => { const w = document.createElement('div'); w.className = 'tablewrap'; t.before(w); w.appendChild(t); });
+        if (d.documents?.length) showDocuments(out, d.documents);
+        if (f.generate_image) {
+          const answerForVisual = (refersToPrevious && lastAnswer) ? lastAnswer : d.answer;
+          if (!refersToPrevious || !lastQuestion) lastQuestion = text;
+          lastAnswer = answerForVisual;
+          await createImage(answerForVisual, lastQuestion);
+        } else {
+          lastAnswer = d.answer; lastQuestion = text;
+        }
+      }
+    }
     const f = d.flags || {}, sources = d.sources || [];
-    const meta = [`<span>${(d.latency_ms / 1000).toFixed(1)} s</span>`];
-    if (f.tools?.length) meta.push(`<span>${esc([...new Set(f.tools)].join(' · '))}</span>`);
-    if (!sources.length) meta.push('<span>No sources cited</span>');
-    if (f.conflict_flagged) meta.push('<span class="warn">Conflict or data issue flagged</span>');
-    if (f.asked_follow_up) meta.push('<span class="ok">Asked a follow-up</span>');
-    if (f.insufficient) meta.push('<span class="warn">Not in the documents</span>');
-    if (f.removed_citations?.length) meta.push(`<span class="warn">Removed ${f.removed_citations.length} unsupported citation(s)</span>`);
-    out.innerHTML = citeify(md(d.answer));
-    out.querySelectorAll('table').forEach(t => { const w = document.createElement('div'); w.className = 'tablewrap'; t.before(w); w.appendChild(t); });
-    const m = document.createElement('div'); m.className = 'meta'; m.innerHTML = meta.join(''); turn.appendChild(m);
-    if (window.speechSynthesis && window.SpeechSynthesisUtterance) m.appendChild(makeSpeakButton());
-    const s = sourcesBlock(sources); if (s) turn.appendChild(s);
+    if (!d.visual) {
+      const meta = [`<span>${(d.latency_ms / 1000).toFixed(1)} s</span>`];
+      if (f.tools?.length) meta.push(`<span>${esc([...new Set(f.tools)].join(' · '))}</span>`);
+      if (!sources.length) meta.push('<span>No sources cited</span>');
+      if (f.conflict_flagged) meta.push('<span class="warn">Conflict or data issue flagged</span>');
+      if (f.asked_follow_up) meta.push('<span class="ok">Asked a follow-up</span>');
+      if (f.insufficient) meta.push('<span class="warn">Not in the documents</span>');
+      if (f.removed_citations?.length) meta.push(`<span class="warn">Removed ${f.removed_citations.length} unsupported citation(s)</span>`);
+      const m = document.createElement('div'); m.className = 'meta'; m.innerHTML = meta.join(''); turn.appendChild(m);
+      if (window.speechSynthesis && window.SpeechSynthesisUtterance) m.appendChild(makeSpeakButton());
+      const s = sourcesBlock(sources); if (s) turn.appendChild(s);
+    }
   } catch (err) {
     out.innerHTML = `<div class="error" role="alert">The advisor could not answer: ${esc(err.message)}<br><button class="btn" type="button">Try again</button></div>`;
     out.querySelector('button').addEventListener('click', () => { mine.remove(); turn.remove(); ask(text); });
   } finally {
-    turn.removeAttribute('aria-busy'); busy = false; send.disabled = false; q.focus();
+    turn.removeAttribute('aria-busy'); busy = false; send.disabled = false;
+    if (!voiceConversation) q.focus();
     turn.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (voiceConversation) {
+      const spokenAnswer = out.innerText.trim();
+      if (spokenAnswer) speakText(spokenAnswer, null, startVoiceConversationListening);
+      else startVoiceConversationListening();
+    }
   }
 }
 
@@ -567,40 +717,100 @@ log.addEventListener('click', e => {
   if (!button) return;
   if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
   if (activeSpeakButton === button && speechSynthesis.speaking) {
-    speechSynthesis.cancel(); setSpeakButton(button, false); activeSpeakButton = null; return;
-  }
-  if (speechSynthesis.speaking) {
-    speechSynthesis.cancel();
-    if (activeSpeakButton) setSpeakButton(activeSpeakButton, false);
+    cancelSpeech();
+    if (voiceConversation) startVoiceConversationListening();
+    return;
   }
   const content = button.closest('.turn')?.querySelector('.answer')?.innerText || '';
   if (!content.trim()) return;
-  const utterance = new SpeechSynthesisUtterance(content);
-  utterance.lang = 'en-IN';
-  const voices = speechSynthesis.getVoices();
-  const femaleVoicePattern = /female|woman|zira|samantha|karen|susan|heera|veena|lekha|priya|neerja|google.*female/i;
-  const englishVoices = voices.filter(voice => /^en(?:-|$)/i.test(voice.lang));
-  utterance.voice = englishVoices.find(voice => /en-IN/i.test(voice.lang) && femaleVoicePattern.test(`${voice.name} ${voice.voiceURI}`)) ||
-    englishVoices.find(voice => femaleVoicePattern.test(`${voice.name} ${voice.voiceURI}`)) ||
-    englishVoices.find(voice => /en-IN/i.test(voice.lang)) || null;
-  activeSpeakButton = button; setSpeakButton(button, true);
-  utterance.onend = utterance.onerror = () => {
-    if (activeSpeakButton === button) { setSpeakButton(button, false); activeSpeakButton = null; }
-  };
-  speechSynthesis.speak(utterance);
+  speakText(content, button, voiceConversation ? startVoiceConversationListening : null);
 });
 
 $('#profile').addEventListener('change', e => {
   const p = profiles.find(x => x.id === e.target.value);
   renderProfile(p);
   thread = crypto.randomUUID();
+  lastAnswer = ''; lastQuestion = '';
   if (log.querySelector('.turn')) add('bot', `<p class="note">Profile switched to ${esc(p ? p.label : 'none')} – new conversation.</p>`);
 });
 
-// ---- voice input: Azure transcription when configured, otherwise the browser's own speech recognition
+// ---- voice input: browser speech recognition for live conversations, with upload transcription as fallback
 let rec = null, chunks = [], serverSTT = false, listening = null;
 const BrowserSTT = window.SpeechRecognition || window.webkitSpeechRecognition;
 const voiceError = msg => { setMic('idle'); add('bot', `<div class="error" role="alert">${esc(msg)}</div>`); };
+
+function setVoiceConversation(enabled) {
+  voiceConversation = enabled;
+  voiceMode.setAttribute('aria-pressed', String(enabled));
+  voiceMode.textContent = enabled ? 'Stop voice chat' : 'Start voice chat';
+  voiceMode.classList.toggle('active', enabled);
+  mic.disabled = enabled || (!serverSTT && !BrowserSTT);
+  if (enabled) {
+    if (!busy) startVoiceConversationListening();
+    else vstatus.textContent = 'Voice chat will listen after this answer.';
+    return;
+  }
+  clearTimeout(voiceRestartTimer);
+  voiceRestartTimer = null;
+  if (listening) listening.stop();
+  cancelSpeech();
+  setMic('idle');
+}
+
+function startVoiceConversationListening() {
+  if (!voiceConversation || busy || listening || speechSynthesis.speaking) return;
+  const recognition = new BrowserSTT();
+  recognition.lang = 'en-IN';
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  let finalTranscript = '';
+  recognition.onresult = event => {
+    finalTranscript = [...event.results].filter(result => result.isFinal)
+      .map(result => result[0].transcript).join(' ').trim();
+    const interim = [...event.results].filter(result => !result.isFinal)
+      .map(result => result[0].transcript).join(' ').trim();
+    if (finalTranscript) {
+      setMic('busy');
+      recognition.stop();
+    } else if (interim) {
+      vstatus.textContent = `Hearing: ${interim}`;
+    }
+  };
+  recognition.onerror = event => {
+    if (!voiceConversation || event.error === 'no-speech' || event.error === 'aborted') return;
+    if (listening === recognition) listening = null;
+    setVoiceConversation(false);
+    const detail = event.error === 'not-allowed' || event.error === 'service-not-allowed'
+      ? 'Microphone permission was denied. Allow it in your browser’s site settings, then start voice chat again.'
+      : `Voice recognition failed (${event.error}). You can still use the microphone button or type your question.`;
+    voiceError(detail);
+  };
+  recognition.onend = () => {
+    if (listening === recognition) listening = null;
+    if (!voiceConversation) { setMic('idle'); return; }
+    if (finalTranscript) {
+      setMic('busy');
+      ask(finalTranscript);
+      return;
+    }
+    voiceRestartTimer = setTimeout(() => {
+      voiceRestartTimer = null;
+      startVoiceConversationListening();
+    }, 400);
+  };
+  try {
+    recognition.start();
+    listening = recognition;
+    setMic('rec');
+  } catch (error) {
+    setVoiceConversation(false);
+    voiceError(`Could not start voice recognition: ${error.message}`);
+  }
+}
+
+voiceMode.disabled = !BrowserSTT || !window.speechSynthesis || !window.SpeechSynthesisUtterance;
+if (voiceMode.disabled) voiceMode.title = 'Hands-free voice chat needs browser speech recognition and speech output (Chrome or Edge recommended).';
+voiceMode.addEventListener('click', () => setVoiceConversation(!voiceConversation));
 
 function browserListen() {
   if (listening) { listening.stop(); return; }
@@ -608,7 +818,16 @@ function browserListen() {
   let final = '';
   r.onresult = e => { final = [...e.results].map(x => x[0].transcript).join(' '); q.value = final; autosize(); };
   r.onerror = e => voiceError(e.error === 'not-allowed' ? 'Microphone permission was denied. Allow it in the browser’s site settings, or type your question.' : `Voice input failed – ${e.error}`);
-  r.onend = () => { listening = null; setMic('idle'); if (final.trim()) ask(final.trim()); };
+  r.onend = () => {
+    listening = null;
+    if (voiceConversation) {
+      if (final.trim()) ask(final.trim());
+      else startVoiceConversationListening();
+      return;
+    }
+    setMic('idle');
+    if (final.trim()) ask(final.trim());
+  };
   r.start(); listening = r; setMic('rec');
 }
 
@@ -653,6 +872,7 @@ fetch('/api/health').then(r => r.json()).then(h => {
   const msgs = [];
   if (!h.chat) msgs.push('No chat API provider is configured – running in preview mode (retrieval only). Fill in .env and restart.');
   serverSTT = h.transcription;
+  if (!voiceConversation) mic.disabled = !serverSTT && !BrowserSTT;
   if (!h.transcription && !BrowserSTT) msgs.push('Voice input needs an Azure transcription deployment, OPENAI_API_KEY, or a Chrome/Edge browser.');
   if (msgs.length) { $('#banner').textContent = msgs.join(' '); $('#banner').style.display = 'block'; }
   if (!h.transcription && !BrowserSTT) { mic.disabled = true; mic.title = 'Voice input is unavailable in this browser'; }

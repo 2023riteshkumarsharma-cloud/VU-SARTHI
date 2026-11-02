@@ -4,6 +4,7 @@ __pycache__/
 ~$*.xlsx
 knowledge_base/embedding_cache.json
 eval/results/
+/work/
 
 .vercel
 .env*

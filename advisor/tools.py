@@ -20,6 +20,24 @@ FAIL_RULE = "Student Handbook §8.13.3 'F' and 'FA' Grades, pp.25-26"
 REGISTRATION_RULE = "Student Handbook §2.10 (conditions to register), p.17"
 CALENDAR_RULE = "Student Handbook §1.2–1.3 Academic Calendar, p.15"
 MAX_ROWS = 60
+BASKET_DISPLAY_NAMES = (
+    "University Core", "Foundation", "Program Core", "Program Honors",
+    "Specialization Tracks", "Electives", "Open/Minor", "Internship/Capstone Project",
+)
+BASKET_CODE_RE = re.compile(
+    r"\bB[1-7]\s+(?=" + "|".join(re.escape(name) for name in BASKET_DISPLAY_NAMES) + r"\b)",
+    re.I,
+)
+
+
+def display_basket_name(value):
+    """Return the descriptive basket name without its internal spreadsheet ID."""
+    return BASKET_CODE_RE.sub("", str(value or "")).strip()
+
+
+def remove_basket_codes(text):
+    """Remove basket IDs from user-facing text while preserving their descriptive names."""
+    return BASKET_CODE_RE.sub("", text)
 
 
 @lru_cache(maxsize=1)
@@ -199,7 +217,7 @@ def lookup_courses(batch: int | None = None, semester: int | None = None, course
     for r in rows[:MAX_ROWS]:
         sources.append(cell_source(r))
         out.append({"batch": r["batch"], "semester": r["semester"], "when": f"{r['months']} {r['calendar_year']}",
-                    "code": r["code"] or f"({r['code_status']})", "title": r["title"], "basket": f"{r['basket_code']} {r['basket_name']}",
+                    "code": r["code"] or f"({r['code_status']})", "title": r["title"], "basket": display_basket_name(r["basket_name"]),
                     "slot": r["slot"], "L-T-P": ltp(r), "credits": r["C"], "prerequisites": r["prereq_text"], "src": len(sources)})
     result = {"count": len(rows), "rows": out}
     if len(rows) > MAX_ROWS:
@@ -227,7 +245,7 @@ def course_details(course: str):
         for r in rows:
             sources.append(cell_source(r))
             per_batch.append({"batch": r["batch"], "semester": r["semester"], "when": f"{r['months']} {r['calendar_year']}",
-                              "title": r["title"], "basket": f"{r['basket_code']} {r['basket_name']}", "L-T-P": ltp(r),
+                              "title": r["title"], "basket": display_basket_name(r["basket_name"]), "L-T-P": ltp(r),
                               "credits": r["C"], "prerequisites": r["prereq_text"], "src": len(sources)})
         minor_rows = []
         for m in mins:
@@ -279,7 +297,7 @@ def semester_plan(batch: int, semester: int):
             continue
         opts = q("SELECT * FROM options WHERE offering_id=? ORDER BY option_no", off["id"])
         sources.append(cell_source(off))
-        rows.append({"basket": f"{off['basket_code']} {off['basket_name']}", "slot": off["slot"],
+        rows.append({"basket": display_basket_name(off["basket_name"]), "slot": off["slot"],
                      "options": [{"code": o["code"] or f"({o['code_status']})", "title": o["title"], "L-T-P": ltp(o),
                                   "prerequisites": o["prereq_text"]} for o in opts],
                      "credits": off["C"], "choose_one": len(opts) > 1, "src": len(sources)})
@@ -298,7 +316,7 @@ def credit_structure(batch: int):
     for r in rows:
         sources.append(r["struct_cell"] or r["semspread_cell"])
         vals = {r["fixed_min_semspread"], r["credits_struct"], r["credits_computed"]} - {None}
-        out.append({"basket": f"{r['basket_code']} {r['basket_name']}", "credits": r["credits_struct"] if r["credits_struct"] is not None else r["credits_computed"],
+        out.append({"basket": display_basket_name(r["basket_name"]), "credits": r["credits_struct"] if r["credits_struct"] is not None else r["credits_computed"],
                     "sources_disagree": None if len(vals) == 1 else {"Struct sheet": r["credits_struct"], "sum of course credits": r["credits_computed"],
                                                                      "semester-spread Fixed Min": r["fixed_min_semspread"]},
                     "src": len(sources)})

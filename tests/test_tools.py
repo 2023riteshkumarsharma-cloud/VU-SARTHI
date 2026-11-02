@@ -22,8 +22,17 @@ def test_semester_total_and_credit_structure():
     assert tools.semester_plan(2024, 1)["result"]["total_credits"] == 21
     cs = tools.credit_structure(2026)["result"]
     assert cs["total_credits_for_degree"] == 180
-    uc = next(b for b in cs["baskets"] if b["basket"].startswith("B1"))
+    uc = next(b for b in cs["baskets"] if b["basket"] == "University Core")
     assert uc["credits"] == 18 and uc["sources_disagree"]["semester-spread Fixed Min"] == 24
+    assert all(not b["basket"].startswith("B") for b in cs["baskets"])
+
+
+def test_course_tool_outputs_use_descriptive_basket_names_only():
+    rows = tools.lookup_courses(batch=2022, semester=1)["result"]["rows"]
+    assert any(row["basket"] == "Program Core" for row in rows)
+    assert all(not row["basket"].startswith("B") for row in rows)
+    assert all(not row["basket"].startswith("B") for row in tools.semester_plan(2022, 1)["result"]["slots"])
+    assert all(not row["basket"].startswith("B") for row in tools.course_details("DATA130")["result"]["programme_plan"])
 
 
 def test_eligibility_decisions():

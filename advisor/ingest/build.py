@@ -585,7 +585,7 @@ def build_cards(options, offerings, baskets, minors, minor_summary, terms, issue
         cards.append({"id": f"course::{o['batch']}::S{o['semester']}::{o['code'] or 'nocode'}::{o['offering_id']}.{o['option_no']}",
                       "doc_type": "course",
                       "text": f"{o['title']} ({o['code'] or 'course code not assigned'}) – {PROGRAMME} batch {o['batch']}: semester {o['semester']} "
-                              f"({t['months']} {t['calendar_year']}), basket {o['basket_code']} {o['basket_name']}{slot}. "
+                              f"({t['months']} {t['calendar_year']}), basket {o['basket_name']}{slot}. "
                               f"L-T-P {fmt_ltp(o)}, {o['C']} credits. Prerequisites: {pre}.{note}",
                       "citation": f"Semester spread {o['batch']} › {o['sheet']} › {o['cells']}",
                       "meta": {"batch": o["batch"], "semester": o["semester"], "code": o["code"]}})
@@ -595,14 +595,14 @@ def build_cards(options, offerings, baskets, minors, minor_summary, terms, issue
         for off in group:
             opts = [o for o in options if o["offering_id"] == off["id"]]
             desc = " OR ".join(f"{o['code'] or '—'} {o['title']}" for o in opts)
-            lines.append(f"- {off['basket_code']} {desc} ({fmt_ltp(opts[0]) if len(opts) == 1 else 'see options'}, {off['C']} cr)")
+            lines.append(f"- {off['basket_name']}: {desc} ({fmt_ltp(opts[0]) if len(opts) == 1 else 'see options'}, {off['C']} cr)")
         total = sum(o["C"] or 0 for o in group)
         cards.append({"id": f"plan::{batch}::S{sem}", "doc_type": "plan",
                       "text": f"{PROGRAMME} batch {batch}, semester {sem} ({t['label']}): {len(group)} course slots, total {total:g} credits.\n" + "\n".join(lines),
                       "citation": f"Semester spread {batch} › {group[0]['sheet']} › semester {sem} block",
                       "meta": {"batch": batch, "semester": sem}})
     for batch, group in sorted(_group(baskets, ("batch",)).items()):
-        lines = [f"- {b['basket_code']} {b['basket_name']}: {b['credits_struct'] if b['credits_struct'] is not None else b['fixed_min_semspread']:g} credits"
+        lines = [f"- {b['basket_name']}: {b['credits_struct'] if b['credits_struct'] is not None else b['fixed_min_semspread']:g} credits"
                  + (f" (Fixed Min column says {b['fixed_min_semspread']:g})" if b["fixed_min_semspread"] not in (None, b["credits_struct"]) else "")
                  for b in group]
         cards.append({"id": f"baskets::{batch[0]}", "doc_type": "basket",
@@ -647,7 +647,7 @@ def build_courses(options, minors):
         if o["code_status"] == "ok":
             info[o["code"]]["programme"] = True
             info[o["code"]]["titles"][o["title"]] += 1
-            info[o["code"]]["batches"][o["batch"]].append(f"S{o['semester']} {o['basket_code']} {fmt_ltp(o)} {o['C']}cr")
+            info[o["code"]]["batches"][o["batch"]].append(f"S{o['semester']} {o['basket_name']} {fmt_ltp(o)} {o['C']}cr")
     for m in minors:
         if m["code"]:
             info[m["code"]]["titles"][m["title"]] += 1

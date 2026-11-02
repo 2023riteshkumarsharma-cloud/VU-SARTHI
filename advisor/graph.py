@@ -153,6 +153,7 @@ def route(state: State):
 def verify(state: State):
     msg = state["messages"][-1]
     text = msg.content if isinstance(msg.content, str) else str(msg.content)
+    text = tools.remove_basket_codes(text)
     text = re.sub(r"(?<=\|)\s*(S\d+)\s*(?=\|)", r" [\1] ", text)  # bare "S3" in a table source column -> [S3]
     text = re.sub(r"\[(S\d+(?:\s*[,;]\s*S\d+)+)\]", lambda m: "".join(f"[{c}]" for c in re.split(r"\s*[,;]\s*", m[1])), text)  # [S1, S5] -> [S1][S5]
     evidence = state.get("evidence") or {}
@@ -204,5 +205,8 @@ def ask(message, thread_id="default", profile=None):
                           {"configurable": {"thread_id": thread_id}, "recursion_limit": 2 * MAX_TOOL_ROUNDS + 6})
     flags = state["flags"]
     ev = state["evidence"] or {}
-    return {"answer": state["messages"][-1].content, "sources": [{"id": c, **ev[c]} for c in flags["cited"]],
+    return {"answer": state["messages"][-1].content, "sources": [
+        {"id": c, **ev[c], "snippet": tools.remove_basket_codes(ev[c].get("snippet", ""))}
+        for c in flags["cited"]
+    ],
             "flags": flags, "latency_ms": round((time.perf_counter() - t0) * 1000)}
