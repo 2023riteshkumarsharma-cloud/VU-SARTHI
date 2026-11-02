@@ -870,11 +870,25 @@ fetch('/api/profiles').then(r => r.json()).then(list => {
 });
 fetch('/api/health').then(r => r.json()).then(h => {
   const msgs = [];
-  if (!h.chat) msgs.push('No chat API provider is configured – running in preview mode (retrieval only). Fill in .env and restart.');
+  if (!h.chat) msgs.push(h.vercel
+    ? 'No chat API provider is configured for this Vercel deployment – running in preview mode (retrieval only). Add provider credentials in Vercel Project Settings → Environment Variables, then redeploy.'
+    : 'No chat API provider is configured – running in preview mode (retrieval only). Fill in .env and restart.');
   serverSTT = h.transcription;
   if (!voiceConversation) mic.disabled = !serverSTT && !BrowserSTT;
   if (!h.transcription && !BrowserSTT) msgs.push('Voice input needs an Azure transcription deployment, OPENAI_API_KEY, or a Chrome/Edge browser.');
-  if (msgs.length) { $('#banner').textContent = msgs.join(' '); $('#banner').style.display = 'block'; }
+  if (msgs.length) {
+    const banner = $('#banner');
+    banner.textContent = msgs.join(' ');
+    if (!h.chat && h.vercel) {
+      const link = document.createElement('a');
+      link.href = 'https://vercel.com/2023riteshkumarsharma-3092/vu-sarthi/settings/environment-variables';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = ' Open Vercel environment settings.';
+      banner.appendChild(link);
+    }
+    banner.style.display = 'block';
+  }
   if (!h.transcription && !BrowserSTT) { mic.disabled = true; mic.title = 'Voice input is unavailable in this browser'; }
 });
 </script>

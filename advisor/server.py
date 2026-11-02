@@ -757,7 +757,7 @@ def index():
 def health():
     return {"chat": config.chat_ready(), "chat_provider": config.chat_provider(), "embeddings": config.EMB_PATH.exists(),
             "transcription": config.transcription_ready(), "transcription_provider": config.transcription_provider(),
-            "knowledge_base": config.DB_PATH.exists()}
+            "knowledge_base": config.DB_PATH.exists(), "vercel": bool(os.getenv("VERCEL"))}
 
 
 @app.get("/api/documents/{document_id}")

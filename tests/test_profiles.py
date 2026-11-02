@@ -39,3 +39,12 @@ def test_profile_list_api_returns_all_ten_named_profiles():
     profiles = response.json()
     assert len(profiles) == 10
     assert profiles[0]["label"].startswith("Aarav Sharma")
+
+
+def test_health_reports_vercel_runtime(monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+
+    response = TestClient(server.app).get("/api/health")
+
+    assert response.status_code == 200
+    assert response.json()["vercel"] is True
